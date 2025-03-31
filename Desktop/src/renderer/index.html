@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>School Fees Management</title>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'">
+    <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- School Setup Section -->
+        <div id="schoolSetup" class="screen">
+            <h2>School Setup</h2>
+            <form id="schoolSetupForm">
+                <div class="form-group">
+                    <label for="schoolName">School Name:</label>
+                    <input type="text" id="schoolName" required>
+                </div>
+                <div class="form-group">
+                    <label for="schoolLocation">School Location:</label>
+                    <input type="text" id="schoolLocation" required>
+                </div>
+                <div class="form-group">
+                    <label for="sessionStartMonth">Session Start Month:</label>
+                    <select id="sessionStartMonth" required>
+                        <option value="1">January</option>
+                        <option value="2">February</option>
+                        <option value="3">March</option>
+                        <option value="4">April</option>
+                        <option value="5">May</option>
+                        <option value="6">June</option>
+                        <option value="7">July</option>
+                        <option value="8">August</option>
+                        <option value="9">September</option>
+                        <option value="10">October</option>
+                        <option value="11">November</option>
+                        <option value="12">December</option>
+                    </select>
+                </div>
+                <button type="button" id="saveSchoolBtn">Save School Information</button>
+                <div id="setupError" class="error"></div>
+            </form>
+        </div>
+
+        <!-- Dashboard Section -->
+        <div id="dashboard" class="screen hidden">
+            <h2 id="dashboardTitle">Dashboard</h2>
+            <div class="stats-container">
+                <div class="stat-card">
+                    <div class="stat-value" id="activeSessions">0</div>
+                    <div>Active Sessions</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalStudents">0</div>
+                    <div>Total Students</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="pendingFees">0</div>
+                    <div>Pending Fees</div>
+                </div>
+            </div>
+            <div class="nav-buttons">
+                <button id="sessionsBtn" class="nav-button">Manage Sessions</button>
+                <button id="feesBtn" class="nav-button">Manage Fees</button>
+                <button id="routesBtn" class="nav-button">Manage Routes</button>
+                <button id="studentsBtn" class="nav-button">Manage Students</button>
+            </div>
+        </div>
+
+        <!-- Sessions Section -->
+        <div id="sessionsSection" class="sub-screen hidden">
+            <h2>Manage Sessions</h2>
+            <div class="form-container">
+                <form id="sessionForm">
+                    <div class="form-group">
+                        <label for="sessionName">Session Name:</label>
+                        <input type="text" id="sessionName" placeholder="e.g., 2024-2025" required>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="sessionStartDate">Start Date:</label>
+                            <input type="date" id="sessionStartDate" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="sessionEndDate">End Date:</label>
+                            <input type="date" id="sessionEndDate" required>
+                        </div>
+                    </div>
+                    <div class="form-group checkbox-group">
+                        <input type="checkbox" id="sessionActive">
+                        <label for="sessionActive">Set as Active Session</label>
+                    </div>
+                    <button type="button" id="addSessionBtn">Add Session</button>
+                </form>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Start Date</th>
+                            <th>End Date</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sessionsTableBody"></tbody>
+                </table>
+            </div>
+            <button id="sessionsBackBtn" class="back-button">Back to Dashboard</button>
+        </div>
+    </div>
+    <script src="renderer.js"></script>
+</body>
+</html> 

@@ -9,7 +9,7 @@
 <body>
     <div class="container">
         <!-- School Setup Section -->
-        <div id="schoolSetup" class="screen">
+        <div id="schoolSetup" class="screen hidden">
             <h2>School Setup</h2>
             <form id="schoolSetupForm">
                 <div class="form-group">
@@ -108,6 +108,158 @@
                 </table>
             </div>
             <button id="sessionsBackBtn" class="back-button">Back to Dashboard</button>
+        </div>
+
+        <!-- Fees Section -->
+        <div id="feesSection" class="sub-screen hidden">
+            <h2>Manage Fee Types</h2>
+            <div class="form-container">
+                <form id="feeForm">
+                    <div class="form-group">
+                        <label for="feeName">Fee Type Name:</label>
+                        <input type="text" id="feeName" placeholder="e.g., Tuition, Library, Transport" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="feeAmount">Base Amount:</label>
+                        <input type="number" id="feeAmount" min="0" step="0.01" required>
+                    </div>
+                    <div class="form-group checkbox-group">
+                        <input type="checkbox" id="feeRecurring">
+                        <label for="feeRecurring">Recurring Fee</label>
+                    </div>
+                    <button type="button" id="addFeeBtn">Add Fee Type</button>
+                </form>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Amount</th>
+                            <th>Recurring</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="feesTableBody"></tbody>
+                </table>
+            </div>
+            <button id="feesBackBtn" class="back-button">Back to Dashboard</button>
+        </div>
+
+        <!-- Routes Section -->
+        <div id="routesSection" class="sub-screen hidden">
+            <h2>Manage Transport Routes</h2>
+            <div class="form-container">
+                <form id="routeForm">
+                    <div class="form-group">
+                        <label for="routeName">Route Name:</label>
+                        <input type="text" id="routeName" placeholder="e.g., North Zone, City Center" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="routeDistance">Distance (km):</label>
+                        <input type="number" id="routeDistance" min="0" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="routeFee">Base Fee:</label>
+                        <input type="number" id="routeFee" min="0" step="0.01" required>
+                    </div>
+                    <button type="button" id="addRouteBtn">Add Route</button>
+                </form>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Distance (km)</th>
+                            <th>Base Fee</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="routesTableBody"></tbody>
+                </table>
+            </div>
+            <button id="routesBackBtn" class="back-button">Back to Dashboard</button>
+        </div>
+
+        <!-- Students Section -->
+        <div id="studentsSection" class="sub-screen hidden">
+            <h2>Manage Students</h2>
+            <div class="form-container">
+                <form id="studentForm">
+                    <div class="form-group">
+                        <label for="studentName">Student Name:</label>
+                        <input type="text" id="studentName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="admissionNumber">Admission Number:</label>
+                        <input type="text" id="admissionNumber" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="studentRoute">Transport Route:</label>
+                        <select id="studentRoute">
+                            <option value="">None</option>
+                            <!-- Will be filled dynamically -->
+                        </select>
+                    </div>
+                    <button type="button" id="addStudentBtn">Add Student</button>
+                </form>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Admission #</th>
+                            <th>Transport Route</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="studentsTableBody"></tbody>
+                </table>
+            </div>
+            <button id="studentsBackBtn" class="back-button">Back to Dashboard</button>
+        </div>
+
+        <!-- Student Fees Section -->
+        <div id="studentFeesSection" class="sub-screen hidden">
+            <h2>Manage Student Fees</h2>
+            <h3 id="studentFeesName"></h3>
+            <div class="form-container">
+                <form id="studentFeeForm">
+                    <input type="hidden" id="studentFeeStudentId">
+                    <div class="form-group">
+                        <label for="feeType">Fee Type:</label>
+                        <select id="feeType" required>
+                            <!-- Will be filled dynamically -->
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="feeAmount">Amount:</label>
+                        <input type="number" id="feeAmount" min="0" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="feeDueDate">Due Date:</label>
+                        <input type="date" id="feeDueDate" required>
+                    </div>
+                    <button type="button" id="addStudentFeeBtn">Add Fee</button>
+                </form>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Fee Type</th>
+                            <th>Amount</th>
+                            <th>Due Date</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="studentFeesTableBody"></tbody>
+                </table>
+            </div>
+            <button id="studentFeesBackBtn" class="back-button">Back to Students</button>
         </div>
     </div>
     <script src="renderer.js"></script>

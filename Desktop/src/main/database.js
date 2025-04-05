@@ -113,27 +113,6 @@ function addSchool(name, location, sessionStartMonth, callback) {
 }
 
 
-function getSchool(callback) {
-  console.log('Checking for school in database...');
-  db.get('SELECT * FROM school WHERE id = 1', (err, school) => {
-    if (err) {
-      console.error('Database error:', err);
-      callback(err);
-      return;
-    }
-    
-    console.log('School data:', school);
-    
-    if (school) {
-      // If school exists, check for session updates
-      checkAndUpdateSession(school.session_start_month, school.last_session_update);
-    }
-    
-    callback(null, school);
-  });
-}
-
-
 // Dashboard stats
 function getDashboardStats(callback) {
   const stats = {};
@@ -256,27 +235,323 @@ function checkAndUpdateSession(startMonth, lastUpdate) {
   }
 }
 
-// Update the get-school handler
-ipcMain.on('get-school', (event) => {
-  db.getSchool((err, school) => {
-    console.log('IPC: Checking for school');
+function getSchool(callback) {
+  db.get('SELECT * FROM school WHERE id = 1', (err, school) => {
     if (err) {
       console.error('Error fetching school:', err);
-      event.reply('school-info', { error: err.message });
+      callback(err);
       return;
     }
-    console.log('School fetched:', school);
-    event.reply('school-info', school);
+
+    if (school) {
+      // School exists, check for session updates
+      checkAndUpdateSession(school.session_start_month, school.last_session_update);
+      callback(null, school);
+    } else {
+      // No school exists
+      callback(null, null);
+    }
   });
-});
+}
+
+// Add session functions
+function getSessions(callback) {
+  db.all('SELECT * FROM sessions ORDER BY start_date DESC', callback);
+}
+
+function addSession(name, startDate, endDate, isActive, callback) {
+  // If setting as active, first deactivate all sessions
+  if (isActive) {
+    db.run('UPDATE sessions SET is_active = 0', [], (err) => {
+      if (err) {
+        callback(err);
+        return;
+      }
+      insertSession();
+    });
+  } else {
+    insertSession();
+  }
+
+  function insertSession() {
+    db.run(
+      'INSERT INTO sessions (name, start_date, end_date, is_active) VALUES (?, ?, ?, ?)',
+      [name, startDate, endDate, isActive ? 1 : 0],
+      function(err) {
+        if (err) {
+          callback(err);
+          return;
+        }
+        callback(null, {
+          id: this.lastID,
+          name,
+          start_date: startDate,
+          end_date: endDate,
+          is_active: isActive
+        });
+      }
+    );
+  }
+}
+
+// Fee type functions
+function getFeeTypes(callback) {
+  db.all('SELECT * FROM fee_types ORDER BY name', callback);
+}
+
+function addFeeType(name, amount, isRecurring, callback) {
+  db.run(
+    'INSERT INTO fee_types (name, amount, is_recurring) VALUES (?, ?, ?)',
+    [name, amount, isRecurring ? 1 : 0],
+    function(err) {
+      if (err) {
+        callback(err);
+        return;
+      }
+      callback(null, {
+        id: this.lastID,
+        name,
+        amount,
+        is_recurring: isRecurring
+      });
+    }
+  );
+}
+
+function updateFeeType(id, name, amount, isRecurring, callback) {
+  db.run(
+    'UPDATE fee_types SET name = ?, amount = ?, is_recurring = ? WHERE id = ?',
+    [name, amount, isRecurring ? 1 : 0, id],
+    function(err) {
+      callback(err ? err : null);
+    }
+  );
+}
+
+function deleteFeeType(id, callback) {
+  // First check if this fee type is being used by any student
+  db.get('SELECT COUNT(*) as count FROM student_fees WHERE fee_type_id = ?', [id], (err, result) => {
+    if (err) {
+      callback(err);
+      return;
+    }
+    
+    if (result.count > 0) {
+      callback(new Error(`Cannot delete: This fee type is assigned to ${result.count} student(s)`));
+      return;
+    }
+    
+    // Safe to delete
+    db.run('DELETE FROM fee_types WHERE id = ?', [id], function(err) {
+      callback(err);
+    });
+  });
+}
+
+// Routes functions
+function getRoutes(callback) {
+  db.all('SELECT * FROM routes ORDER BY name', callback);
+}
+
+function addRoute(name, distanceKm, baseFee, callback) {
+  db.run(
+    'INSERT INTO routes (name, distance_km, base_fee) VALUES (?, ?, ?)',
+    [name, distanceKm, baseFee],
+    function(err) {
+      if (err) {
+        callback(err);
+        return;
+      }
+      callback(null, {
+        id: this.lastID,
+        name,
+        distance_km: distanceKm,
+        base_fee: baseFee
+      });
+    }
+  );
+}
+
+function updateRoute(id, name, distanceKm, baseFee, callback) {
+  db.run(
+    'UPDATE routes SET name = ?, distance_km = ?, base_fee = ? WHERE id = ?',
+    [name, distanceKm, baseFee, id],
+    function(err) {
+      callback(err ? err : null);
+    }
+  );
+}
+
+function deleteRoute(id, callback) {
+  // Check if any students are using this route
+  db.get('SELECT COUNT(*) as count FROM students WHERE route_id = ?', [id], (err, result) => {
+    if (err) {
+      callback(err);
+      return;
+    }
+    
+    if (result.count > 0) {
+      callback(new Error(`Cannot delete: This route is assigned to ${result.count} student(s)`));
+      return;
+    }
+    
+    // Safe to delete
+    db.run('DELETE FROM routes WHERE id = ?', [id], function(err) {
+      callback(err);
+    });
+  });
+}
+
+// Student functions
+function getStudents(callback) {
+  db.all(`
+    SELECT s.*, r.name as route_name 
+    FROM students s
+    LEFT JOIN routes r ON s.route_id = r.id
+    ORDER BY s.name
+  `, callback);
+}
+
+function getStudent(id, callback) {
+  db.get(`
+    SELECT s.*, r.name as route_name 
+    FROM students s
+    LEFT JOIN routes r ON s.route_id = r.id
+    WHERE s.id = ?
+  `, [id], callback);
+}
+
+function addStudent(name, admissionNumber, routeId, callback) {
+  db.run(
+    'INSERT INTO students (name, admission_number, route_id) VALUES (?, ?, ?)',
+    [name, admissionNumber, routeId || null],
+    function(err) {
+      if (err) {
+        // Check for duplicate admission number
+        if (err.message.includes('UNIQUE constraint failed')) {
+          callback(new Error('A student with this admission number already exists'));
+          return;
+        }
+        callback(err);
+        return;
+      }
+      
+      callback(null, {
+        id: this.lastID,
+        name,
+        admission_number: admissionNumber,
+        route_id: routeId
+      });
+    }
+  );
+}
+
+function updateStudent(id, name, admissionNumber, routeId, callback) {
+  db.run(
+    'UPDATE students SET name = ?, admission_number = ?, route_id = ? WHERE id = ?',
+    [name, admissionNumber, routeId || null, id],
+    function(err) {
+      if (err) {
+        // Check for duplicate admission number
+        if (err.message.includes('UNIQUE constraint failed')) {
+          callback(new Error('A student with this admission number already exists'));
+          return;
+        }
+        callback(err);
+        return;
+      }
+      callback(null);
+    }
+  );
+}
+
+function deleteStudent(id, callback) {
+  // First delete all associated fees
+  db.run('DELETE FROM student_fees WHERE student_id = ?', [id], (err) => {
+    if (err) {
+      callback(err);
+      return;
+    }
+    
+    // Then delete the student
+    db.run('DELETE FROM students WHERE id = ?', [id], function(err) {
+      callback(err);
+    });
+  });
+}
+
+// Student fees functions
+function getStudentFees(studentId, callback) {
+  db.all(`
+    SELECT sf.*, ft.name as fee_name
+    FROM student_fees sf
+    JOIN fee_types ft ON sf.fee_type_id = ft.id
+    WHERE sf.student_id = ?
+    ORDER BY sf.due_date
+  `, [studentId], callback);
+}
+
+function addStudentFee(studentId, feeTypeId, amount, dueDate, callback) {
+  db.run(
+    'INSERT INTO student_fees (student_id, fee_type_id, amount, due_date) VALUES (?, ?, ?, ?)',
+    [studentId, feeTypeId, amount, dueDate],
+    function(err) {
+      if (err) {
+        callback(err);
+        return;
+      }
+      callback(null, {
+        id: this.lastID,
+        student_id: studentId,
+        fee_type_id: feeTypeId,
+        amount,
+        due_date: dueDate,
+        status: 'pending'
+      });
+    }
+  );
+}
+
+function updateFeeStatus(id, status, callback) {
+  db.run(
+    'UPDATE student_fees SET status = ? WHERE id = ?',
+    [status, id],
+    function(err) {
+      callback(err ? err : null);
+    }
+  );
+}
+
+function deleteStudentFee(id, callback) {
+  db.run('DELETE FROM student_fees WHERE id = ?', [id], function(err) {
+    callback(err);
+  });
+}
 
 module.exports = {
   initDatabase,
-  addSchool,
   getSchool,
-  getDashboardStats,
+  addSchool,
+  getSessions,
   getSession,
+  addSession,
   deleteSession,
-  createInitialSession,
-  generateWebToken
+  getFeeTypes,
+  addFeeType,
+  updateFeeType,
+  deleteFeeType,
+  getRoutes,
+  addRoute,
+  updateRoute,
+  deleteRoute,
+  getStudents,
+  getStudent,
+  addStudent,
+  updateStudent,
+  deleteStudent,
+  getStudentFees,
+  addStudentFee,
+  updateFeeStatus,
+  deleteStudentFee,
+  getDashboardStats
 }; 

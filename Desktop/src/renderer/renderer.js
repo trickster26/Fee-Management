@@ -1,557 +1,670 @@
 const { ipcRenderer } = require('electron');
+const path = require('path');
+const { 
+  formatCurrency, 
+  formatDate, 
+  safelyUpdateElement, 
+  showNotification, 
+  throttle 
+} = require('../utils/helpers');
 
-// Helper functions
+// Console log for initialization
+console.log('Initializing School Management System...');
+
+// Global variables
+let currentSection = 'dashboard';
+let isSchoolSetup = false;
+
+// Theme handling
+let darkMode = false;
+const themeToggle = document.getElementById('themeToggle');
+
+// Initialize the app
+document.addEventListener('DOMContentLoaded', () => {
+  console.log('DOM fully loaded');
+  
+  // Check if dark mode is saved in local storage
+  const savedTheme = localStorage.getItem('theme');
+  if (savedTheme === 'dark') {
+    darkMode = true;
+    document.body.classList.add('dark-mode');
+    if (themeToggle) {
+      themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
+    }
+  }
+  
+  // Check if school is set up and auto-login if it exists
+  ipcRenderer.send('get-school');
+  
+  // Set up event listeners
+  setupEventListeners();
+});
+
+// Helper Functions
 function showSection(sectionId) {
-  document.querySelectorAll('.screen, .sub-screen').forEach(el => el.classList.add('hidden'));
-  const section = document.getElementById(sectionId);
-  if (section) section.classList.remove('hidden');
-  if (sectionId === 'dashboard') ipcRenderer.send('get-dashboard-stats');
-  if (sectionId === 'sessionsSection') ipcRenderer.send('get-sessions');
-  if (sectionId === 'feesSection') ipcRenderer.send('get-fee-types');
-  if (sectionId === 'routesSection') ipcRenderer.send('get-routes');
-  if (sectionId === 'studentsSection') {
-    ipcRenderer.send('get-students');
-    ipcRenderer.send('get-routes'); // For route dropdown
+  console.log(`Showing section: ${sectionId}`);
+  
+  // Map section IDs to the actual element IDs in the HTML
+  const sectionMap = {
+    'dashboard': 'dashboard',
+    'sessions': 'sessionsSection',
+    'fees': 'feesSection',
+    'routes': 'routesSection',
+    'students': 'studentsSection'
+  };
+  
+  const actualSectionId = sectionMap[sectionId] || sectionId;
+  
+  // Hide all sections
+  document.querySelectorAll('.content-section').forEach(section => {
+    section.classList.add('hidden');
+  });
+  
+  // Show the selected section
+  const sectionToShow = document.getElementById(actualSectionId);
+  if (sectionToShow) {
+    console.log(`Found section element with ID: ${actualSectionId}`);
+    sectionToShow.classList.remove('hidden');
+    updatePageTitle(sectionId);
+    updateActiveNavItem(sectionId);
+    
+    // Load data for specific sections
+    if (sectionId === 'dashboard') {
+      loadDashboardStats();
+    } else if (sectionId === 'sessions') {
+      loadSessions();
+    } else if (sectionId === 'fees') {
+      loadFeeTypes();
+    } else if (sectionId === 'routes') {
+      loadRoutes();
+    } else if (sectionId === 'students') {
+      loadStudents();
+    }
+  } else {
+    console.warn(`Section element with ID: ${actualSectionId} not found`);
+  }
+}
+
+function updatePageTitle(sectionId) {
+  const titles = {
+    'dashboard': 'Dashboard',
+    'sessions': 'Sessions Management',
+    'fees': 'Fee Types Management',
+    'routes': 'Transport Routes',
+    'students': 'Student Management'
+  };
+  
+  const title = titles[sectionId] || 'School Management';
+  safelyUpdateElement('currentPageTitle', title);
+}
+
+function updateActiveNavItem(sectionId) {
+  // Remove active class from all nav items
+  document.querySelectorAll('.nav-item').forEach(item => {
+    item.classList.remove('active');
+  });
+  
+  // Add active class to the current section's nav item
+  const navItem = document.querySelector(`.nav-item[data-section="${sectionId}"]`);
+  if (navItem) {
+    navItem.classList.add('active');
+  }
+}
+
+function toggleTheme() {
+  darkMode = !darkMode;
+  
+  if (darkMode) {
+    document.body.classList.add('dark-mode');
+    localStorage.setItem('theme', 'dark');
+    if (themeToggle) {
+      themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
+    }
+  } else {
+    document.body.classList.remove('dark-mode');
+    localStorage.setItem('theme', 'light');
+    if (themeToggle) {
+      themeToggle.innerHTML = '<i class="fas fa-moon"></i>';
+    }
+  }
+}
+
+function getInitials(name) {
+  if (!name) return 'NA';
+  return name
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase())
+    .slice(0, 2)
+    .join('');
+}
+
+function showModal(modalId) {
+  const modalOverlay = document.querySelector('.modal-overlay');
+  if (modalOverlay) {
+    modalOverlay.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+}
+
+function hideModal() {
+  const modalOverlay = document.querySelector('.modal-overlay');
+  if (modalOverlay) {
+    modalOverlay.classList.remove('active');
+    document.body.style.overflow = '';
   }
 }
 
 function clearForm(formId) {
-  document.querySelectorAll(`#${formId} input:not([type=hidden])`).forEach(input => {
-    if (input.type === 'checkbox') {
-      input.checked = false;
-    } else {
+  const form = document.getElementById(formId);
+  if (form) {
+    form.reset();
+    
+    // Clear any hidden fields
+    form.querySelectorAll('input[type="hidden"]').forEach(input => {
       input.value = '';
-    }
-  });
-  document.querySelectorAll(`#${formId} select`).forEach(select => {
-    select.selectedIndex = 0;
-  });
+    });
+  }
 }
 
-function formatDate(dateString) {
-  return new Date(dateString).toLocaleDateString('en-GB', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric'
-  });
-}
-
-function formatCurrency(amount) {
-  return parseFloat(amount).toLocaleString('en-US', {
-    style: 'currency',
-    currency: 'USD'
-  });
-}
-
-// Setup event listeners
-window.onload = () => {
-  console.log('Renderer: App loaded, checking school');
+// School Setup Functions
+function saveSchoolInfo() {
+  console.log('Saving school information');
+  
+  const schoolName = document.getElementById('schoolName')?.value;
+  const schoolLocation = document.getElementById('schoolLocation')?.value;
+  const sessionStartMonth = document.getElementById('sessionStartMonth')?.value;
+  
+  if (!schoolName || !schoolLocation || !sessionStartMonth) {
+    showNotification('Please fill in all required fields', 'error');
+    return;
+  }
+  
+  // First check if school data already exists
   ipcRenderer.send('get-school');
+  
+  // Store the form data temporarily
+  window.pendingSchoolData = {
+    name: schoolName,
+    location: schoolLocation,
+    sessionStartMonth: parseInt(sessionStartMonth)
+  };
+  
+  showNotification('Checking existing school data...', 'info');
+}
 
-  // Add event listeners for UI elements
-  // School setup
-  document.getElementById('saveSchoolBtn')?.addEventListener('click', addSchool);
+// Dashboard Functions
+function loadDashboardStats() {
+  console.log('Loading dashboard stats...');
+  ipcRenderer.send('get-dashboard-stats');
   
-  // Navigation buttons
-  document.getElementById('sessionsBtn')?.addEventListener('click', () => showSection('sessionsSection'));
-  document.getElementById('feesBtn')?.addEventListener('click', () => showSection('feesSection'));
-  document.getElementById('routesBtn')?.addEventListener('click', () => showSection('routesSection'));
-  document.getElementById('studentsBtn')?.addEventListener('click', () => showSection('studentsSection'));
+  // Update stats with placeholders until real data arrives
+  safelyUpdateElement('activeSessions', '0');
+  safelyUpdateElement('totalStudents', '0');
+  safelyUpdateElement('pendingFees', '₹0');
+  safelyUpdateElement('totalRoutes', '0');
   
-  // Back buttons
-  document.getElementById('sessionsBackBtn')?.addEventListener('click', () => showSection('dashboard'));
-  document.getElementById('feesBackBtn')?.addEventListener('click', () => showSection('dashboard'));
-  document.getElementById('routesBackBtn')?.addEventListener('click', () => showSection('dashboard'));
-  document.getElementById('studentsBackBtn')?.addEventListener('click', () => showSection('dashboard'));
-  document.getElementById('studentFeesBackBtn')?.addEventListener('click', () => showSection('studentsSection'));
-  
-  // Form submission buttons
-  document.getElementById('addSessionBtn')?.addEventListener('click', addSession);
-  document.getElementById('addFeeBtn')?.addEventListener('click', addFeeType);
-  document.getElementById('addRouteBtn')?.addEventListener('click', addRoute);
-  document.getElementById('addStudentBtn')?.addEventListener('click', addStudent);
-  document.getElementById('addStudentFeeBtn')?.addEventListener('click', addStudentFee);
-};
+  // Show placeholder charts while data loads
+  loadFeeChart();
+  loadRecentActivities();
+}
 
-// School setup handlers
-ipcRenderer.on('school-info', (event, school) => {
-  if (school && !school.error) {
-    // School exists, show dashboard
-    document.getElementById('dashboardTitle').textContent = `${school.name} Dashboard`;
+function loadFeeChart() {
+  // This would normally be a chart library implementation
+  // For now, we'll just show a placeholder
+  const chartElement = document.getElementById('feeChart');
+  if (chartElement) {
+    chartElement.innerHTML = `<div class="chart-placeholder">Fee collection chart will be displayed here</div>`;
+  }
+}
+
+function loadRecentActivities() {
+  // This would normally fetch recent activities from the database
+  // For now, we'll just show a placeholder
+  const activitiesElement = document.getElementById('recentActivities');
+  if (activitiesElement) {
+    activitiesElement.innerHTML = `<div class="activity-placeholder">No recent activities found</div>`;
+  }
+}
+
+// Setup Event Listeners
+function setupEventListeners() {
+  console.log('Setting up event listeners');
+  
+  // Theme toggle
+  if (themeToggle) {
+    themeToggle.addEventListener('click', toggleTheme);
+  }
+  
+  // Navigation
+  document.querySelectorAll('.nav-item').forEach(item => {
+    item.addEventListener('click', function() {
+      const section = this.getAttribute('data-section');
+      if (section) {
+        showSection(section);
+      }
+    });
+  });
+  
+  // School setup form
+  const schoolSetupForm = document.getElementById('schoolSetupForm');
+  if (schoolSetupForm) {
+    schoolSetupForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      saveSchoolInfo();
+    });
+  }
+  
+  // Save school info button
+  const saveSchoolBtn = document.getElementById('saveSchoolBtn');
+  if (saveSchoolBtn) {
+    saveSchoolBtn.addEventListener('click', saveSchoolInfo);
+  }
+  
+  // Modal close buttons
+  document.querySelectorAll('.modal-close').forEach(btn => {
+    btn.addEventListener('click', hideModal);
+  });
+  
+  // Add event handlers for buttons in the application
+  setupButtonHandlers();
+}
+
+function setupButtonHandlers() {
+  // Add Session Button
+  const addSessionBtn = document.getElementById('addSessionBtn');
+  if (addSessionBtn) {
+    addSessionBtn.addEventListener('click', () => showSessionModal());
+  }
+  
+  // Add Fee Type Button
+  const addFeeTypeBtn = document.getElementById('addFeeTypeBtn');
+  if (addFeeTypeBtn) {
+    addFeeTypeBtn.addEventListener('click', () => showFeeTypeModal());
+  }
+  
+  // Add Route Button
+  const addRouteBtn = document.getElementById('addRouteBtn');
+  if (addRouteBtn) {
+    addRouteBtn.addEventListener('click', () => showRouteModal());
+  }
+  
+  // Add Student Button
+  const addStudentBtn = document.getElementById('addStudentBtn');
+  if (addStudentBtn) {
+    addStudentBtn.addEventListener('click', () => showStudentModal());
+  }
+}
+
+// IPC Renderer Event Handlers
+ipcRenderer.on('school-info', (event, schoolInfo) => {
+  console.log('School info result:', schoolInfo);
+  
+  // If we have pending school data to save, handle it here
+  if (window.pendingSchoolData) {
+    if (schoolInfo) {
+      // School already exists
+      showNotification('School information already exists', 'error');
+      window.pendingSchoolData = null;
+    } else {
+      // No school exists yet, proceed with saving
+      ipcRenderer.send('add-school', window.pendingSchoolData);
+      showNotification('Saving school information...', 'info');
+      window.pendingSchoolData = null;
+    }
+    return;
+  }
+  
+  // Regular initialization flow
+  if (schoolInfo) {
+    // School is already set up, auto-login
+    isSchoolSetup = true;
+    const schoolSetup = document.getElementById('schoolSetup');
+    const appLayout = document.getElementById('appLayout');
+    
+    if (schoolSetup) schoolSetup.classList.add('hidden');
+    if (appLayout) appLayout.classList.remove('hidden');
+    
+    // Update school name and location in header
+    safelyUpdateElement('schoolNameHeader', schoolInfo.name);
+    safelyUpdateElement('schoolLocationDisplay', schoolInfo.location);
+    
+    // Show dashboard
     showSection('dashboard');
-    ipcRenderer.send('get-dashboard-stats');
+    
+    // Load initial dashboard data
+    loadDashboardStats();
+    
+    showNotification(`Welcome back to ${schoolInfo.name}!`, 'success');
   } else {
-    // No school exists, show setup screen
-    showSection('schoolSetup');
+    // School is not set up, show setup form
+    isSchoolSetup = false;
+    const schoolSetup = document.getElementById('schoolSetup');
+    const appLayout = document.getElementById('appLayout');
+    
+    if (schoolSetup) schoolSetup.classList.remove('hidden');
+    if (appLayout) appLayout.classList.add('hidden');
+    
+    showNotification('Welcome! Please set up your school information.', 'info');
   }
 });
 
 ipcRenderer.on('school-added', (event, result) => {
-  if (result.error) {
-    document.getElementById('setupError').textContent = result.error;
-  } else {
-    // Show web token to user
-    alert(`School registered successfully!\n\nYour Web Login Token: ${result.webToken}\n\nPlease save this token securely as it will be needed for web access.`);
-    document.getElementById('dashboardTitle').textContent = `${result.name} Dashboard`;
+  console.log('School added result:', result);
+  
+  if (result.success) {
+    isSchoolSetup = true;
+    
+    // Hide setup screen, show app
+    const schoolSetup = document.getElementById('schoolSetup');
+    const appLayout = document.getElementById('appLayout');
+    
+    if (schoolSetup) schoolSetup.classList.add('hidden');
+    if (appLayout) appLayout.classList.remove('hidden');
+    
+    // Update school name and location in header
+    safelyUpdateElement('schoolNameHeader', result.data.name);
+    safelyUpdateElement('schoolLocationDisplay', result.data.location);
+    
+    // Show dashboard
     showSection('dashboard');
-    ipcRenderer.send('get-dashboard-stats');
-  }
-});
-
-// Dashboard handlers
-ipcRenderer.on('dashboard-stats', (event, stats) => {
-  if (stats && !stats.error) {
-    document.getElementById('activeSessions').textContent = stats.activeSessions || 0;
-    document.getElementById('totalStudents').textContent = stats.totalStudents || 0;
-    document.getElementById('pendingFees').textContent = stats.pendingFees || 0;
+    
+    showNotification('School information saved successfully', 'success');
   } else {
-    console.error('Error loading dashboard stats:', stats?.error || 'Unknown error');
+    showNotification(result.error || 'Failed to save school information', 'error');
   }
 });
 
-// Session handlers
-ipcRenderer.on('sessions-list', (event, sessions) => {
-  const tbody = document.getElementById('sessionsTableBody');
-  if (!tbody) return;
+ipcRenderer.on('dashboard-stats', (event, stats) => {
+  console.log('Received dashboard stats:', stats);
   
-  tbody.innerHTML = '';
-  sessions.forEach(session => {
-    const row = document.createElement('tr');
-    row.innerHTML = `
-      <td>${session.name}</td>
-      <td>${formatDate(session.start_date)}</td>
-      <td>${formatDate(session.end_date)}</td>
-      <td><span class="status-badge ${session.is_active ? 'active' : 'inactive'}">${session.is_active ? 'Active' : 'Inactive'}</span></td>
-      <td>
-        <button class="action-btn edit-btn" data-id="${session.id}">Edit</button>
-        <button class="action-btn delete-btn" data-id="${session.id}">Delete</button>
-      </td>
-    `;
-    tbody.appendChild(row);
-  });
-  
-  // Add event listeners for action buttons
-  tbody.querySelectorAll('.edit-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const id = btn.getAttribute('data-id');
-      editSession(id);
-    });
-  });
-  
-  tbody.querySelectorAll('.delete-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const id = btn.getAttribute('data-id');
-      deleteSession(id);
-    });
-  });
+  // Update the stats display
+  safelyUpdateElement('activeSessions', stats.activeSessions || '0');
+  safelyUpdateElement('totalStudents', stats.totalStudents || '0');
+  safelyUpdateElement('pendingFees', formatCurrency(stats.pendingFees || 0));
+  safelyUpdateElement('totalRoutes', stats.totalRoutes || '0');
 });
 
-// Fee type handlers
-ipcRenderer.on('fee-types-list', (event, feeTypes) => {
-  const tbody = document.getElementById('feesTableBody');
-  if (!tbody) return;
-  
-  tbody.innerHTML = '';
-  feeTypes.forEach(fee => {
-    const row = document.createElement('tr');
-    row.innerHTML = `
-      <td>${fee.name}</td>
-      <td>${formatCurrency(fee.amount)}</td>
-      <td>${fee.is_recurring ? 'Yes' : 'No'}</td>
-      <td>
-        <button class="action-btn edit-btn" data-id="${fee.id}">Edit</button>
-        <button class="action-btn delete-btn" data-id="${fee.id}">Delete</button>
-      </td>
-    `;
-    tbody.appendChild(row);
-  });
-  
-  // Add event listeners for action buttons
-  tbody.querySelectorAll('.edit-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const id = btn.getAttribute('data-id');
-      editFeeType(id);
-    });
-  });
-  
-  tbody.querySelectorAll('.delete-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const id = btn.getAttribute('data-id');
-      deleteFeeType(id);
-    });
-  });
-  
-  // Also update fee type dropdown in student fees form
-  updateFeeTypeDropdown(feeTypes);
-});
-
-// Route handlers
-ipcRenderer.on('routes-list', (event, routes) => {
-  const tbody = document.getElementById('routesTableBody');
-  if (tbody) {
-    tbody.innerHTML = '';
-    routes.forEach(route => {
-      const row = document.createElement('tr');
-      row.innerHTML = `
-        <td>${route.name}</td>
-        <td>${route.distance_km ? route.distance_km.toFixed(1) : 'N/A'}</td>
-        <td>${route.base_fee ? formatCurrency(route.base_fee) : 'N/A'}</td>
-        <td>
-          <button class="action-btn edit-btn" data-id="${route.id}">Edit</button>
-          <button class="action-btn delete-btn" data-id="${route.id}">Delete</button>
-        </td>
-      `;
-      tbody.appendChild(row);
-    });
-    
-    // Add event listeners for action buttons
-    tbody.querySelectorAll('.edit-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const id = btn.getAttribute('data-id');
-        editRoute(id);
-      });
-    });
-    
-    tbody.querySelectorAll('.delete-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const id = btn.getAttribute('data-id');
-        deleteRoute(id);
-      });
-    });
-  }
-  
-  // Also update route dropdown in student form
-  updateRouteDropdown(routes);
-});
-
-// Student handlers
-ipcRenderer.on('students-list', (event, students) => {
-  const tbody = document.getElementById('studentsTableBody');
-  if (!tbody) return;
-  
-  tbody.innerHTML = '';
-  students.forEach(student => {
-    const row = document.createElement('tr');
-    row.innerHTML = `
-      <td>${student.name}</td>
-      <td>${student.admission_number}</td>
-      <td>${student.route_name || 'None'}</td>
-      <td>
-        <button class="action-btn edit-btn" data-id="${student.id}">Edit</button>
-        <button class="action-btn delete-btn" data-id="${student.id}">Delete</button>
-        <button class="action-btn fees-btn" data-id="${student.id}" data-name="${student.name}">Fees</button>
-      </td>
-    `;
-    tbody.appendChild(row);
-  });
-  
-  // Add event listeners for action buttons
-  tbody.querySelectorAll('.edit-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const id = btn.getAttribute('data-id');
-      editStudent(id);
-    });
-  });
-  
-  tbody.querySelectorAll('.delete-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const id = btn.getAttribute('data-id');
-      deleteStudent(id);
-    });
-  });
-  
-  tbody.querySelectorAll('.fees-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const id = btn.getAttribute('data-id');
-      const name = btn.getAttribute('data-name');
-      viewStudentFees(id, name);
-    });
-  });
-});
-
-// Student fees handlers
-ipcRenderer.on('student-fees-list', (event, fees) => {
-  const tbody = document.getElementById('studentFeesTableBody');
-  if (!tbody) return;
-  
-  tbody.innerHTML = '';
-  fees.forEach(fee => {
-    const row = document.createElement('tr');
-    row.innerHTML = `
-      <td>${fee.fee_name}</td>
-      <td>${formatCurrency(fee.amount)}</td>
-      <td>${formatDate(fee.due_date)}</td>
-      <td>
-        <select class="status-dropdown" data-id="${fee.id}" data-student-id="${fee.student_id}">
-          <option value="pending" ${fee.status === 'pending' ? 'selected' : ''}>Pending</option>
-          <option value="paid" ${fee.status === 'paid' ? 'selected' : ''}>Paid</option>
-          <option value="late" ${fee.status === 'late' ? 'selected' : ''}>Late</option>
-          <option value="waived" ${fee.status === 'waived' ? 'selected' : ''}>Waived</option>
-        </select>
-      </td>
-      <td>
-        <button class="action-btn delete-btn" data-id="${fee.id}" data-student-id="${fee.student_id}">Delete</button>
-      </td>
-    `;
-    tbody.appendChild(row);
-  });
-  
-  // Add event listeners
-  tbody.querySelectorAll('.status-dropdown').forEach(dropdown => {
-    dropdown.addEventListener('change', () => {
-      const id = dropdown.getAttribute('data-id');
-      const studentId = dropdown.getAttribute('data-student-id');
-      const status = dropdown.value;
-      updateFeeStatus(id, studentId, status);
-    });
-  });
-  
-  tbody.querySelectorAll('.delete-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const id = btn.getAttribute('data-id');
-      const studentId = btn.getAttribute('data-student-id');
-      deleteStudentFee(id, studentId);
-    });
-  });
-});
-
-// Helper functions for dropdown updates
-function updateRouteDropdown(routes) {
-  const dropdown = document.getElementById('studentRoute');
-  if (!dropdown) return;
-  
-  // Keep the first "None" option
-  const noneOption = dropdown.options[0];
-  dropdown.innerHTML = '';
-  dropdown.appendChild(noneOption);
-  
-  routes.forEach(route => {
-    const option = document.createElement('option');
-    option.value = route.id;
-    option.textContent = route.name;
-    dropdown.appendChild(option);
-  });
+// Session Functions
+function loadSessions() {
+  ipcRenderer.send('get-sessions');
 }
 
-function updateFeeTypeDropdown(feeTypes) {
-  const dropdown = document.getElementById('feeType');
-  if (!dropdown) return;
+function showSessionModal(mode = 'add', sessionId = null) {
+  resetForm('sessionForm');
+  safelyUpdateElement('modalTitle', mode === 'add' ? 'Add New Session' : 'Edit Session');
   
-  dropdown.innerHTML = '';
-  
-  feeTypes.forEach(fee => {
-    const option = document.createElement('option');
-    option.value = fee.id;
-    option.textContent = `${fee.name} (${formatCurrency(fee.amount)})`;
-    option.dataset.amount = fee.amount;
-    dropdown.appendChild(option);
-  });
-  
-  // Set default amount if a fee type is selected
-  if (dropdown.options.length > 0) {
-    const amountInput = document.getElementById('feeAmount');
-    if (amountInput) {
-      amountInput.value = dropdown.options[0].dataset.amount || '';
-    }
+  if (mode === 'edit' && sessionId) {
+    ipcRenderer.send('get-session', sessionId);
   }
   
-  // Add event listener to update amount when fee type changes
-  dropdown.addEventListener('change', () => {
-    const selectedOption = dropdown.options[dropdown.selectedIndex];
-    const amountInput = document.getElementById('feeAmount');
-    if (amountInput && selectedOption) {
-      amountInput.value = selectedOption.dataset.amount || '';
-    }
-  });
+  document.getElementById('sessionForm').style.display = 'block';
+  document.getElementById('feeTypeForm').style.display = 'none';
+  document.getElementById('routeForm').style.display = 'none';
+  document.getElementById('studentForm').style.display = 'none';
+  
+  document.getElementById('modalOverlay').classList.add('active');
 }
 
-// Form submission functions
-function addSchool() {
-  const name = document.getElementById('schoolName').value.trim();
-  const location = document.getElementById('schoolLocation').value.trim();
-  const sessionStartMonth = parseInt(document.getElementById('sessionStartMonth').value);
-  
-  if (!name || !location) {
-    alert('School name and location are required');
-    return;
-  }
-  
-  ipcRenderer.send('add-school', { name, location, sessionStartMonth });
-}
-
-function addSession() {
-  const name = document.getElementById('sessionName').value.trim();
+function saveSession() {
+  const id = document.getElementById('sessionId').value;
+  const name = document.getElementById('sessionName').value;
   const startDate = document.getElementById('sessionStartDate').value;
   const endDate = document.getElementById('sessionEndDate').value;
   const isActive = document.getElementById('sessionActive').checked;
   
   if (!name || !startDate || !endDate) {
-    alert('All fields are required');
+    showNotification('Please fill in all required fields', 'error');
     return;
   }
   
   if (new Date(startDate) >= new Date(endDate)) {
-    alert('End date must be after start date');
+    showNotification('End date must be after start date', 'error');
     return;
   }
   
-  if (isActive && !confirm('Setting this session as active will deactivate all other sessions. Continue?')) {
-    return;
+  if (id) {
+    // Update existing session
+    ipcRenderer.send('update-session', {
+      id,
+      name,
+      start_date: startDate,
+      end_date: endDate,
+      is_active: isActive
+    });
+    showNotification('Updating session...', 'info');
+  } else {
+    // Add new session
+    ipcRenderer.send('add-session', {
+      name,
+      start_date: startDate,
+      end_date: endDate,
+      is_active: isActive
+    });
+    showNotification('Adding new session...', 'info');
   }
   
-  ipcRenderer.send('add-session', {
-    name,
-    start_date: startDate,
-    end_date: endDate,
-    is_active: isActive
-  });
-  
-  clearForm('sessionForm');
-}
-
-function addFeeType() {
-  const name = document.getElementById('feeName').value.trim();
-  const amount = parseFloat(document.getElementById('feeAmount').value);
-  const isRecurring = document.getElementById('feeRecurring').checked;
-  
-  if (!name || isNaN(amount)) {
-    alert('Name and amount are required');
-    return;
-  }
-  
-  ipcRenderer.send('add-fee-type', {
-    name,
-    amount,
-    is_recurring: isRecurring
-  });
-  
-  clearForm('feeForm');
-}
-
-function addRoute() {
-  const name = document.getElementById('routeName').value.trim();
-  const distance = parseFloat(document.getElementById('routeDistance').value);
-  const fee = parseFloat(document.getElementById('routeFee').value);
-  
-  if (!name || isNaN(distance) || isNaN(fee)) {
-    alert('All fields are required');
-    return;
-  }
-  
-  ipcRenderer.send('add-route', {
-    name,
-    distance_km: distance,
-    base_fee: fee
-  });
-  
-  clearForm('routeForm');
-}
-
-function addStudent() {
-  const name = document.getElementById('studentName').value.trim();
-  const admissionNumber = document.getElementById('admissionNumber').value.trim();
-  const routeDropdown = document.getElementById('studentRoute');
-  const routeId = routeDropdown.value ? parseInt(routeDropdown.value) : null;
-  
-  if (!name || !admissionNumber) {
-    alert('Name and admission number are required');
-    return;
-  }
-  
-  ipcRenderer.send('add-student', {
-    name,
-    admission_number: admissionNumber,
-    route_id: routeId
-  });
-  
-  clearForm('studentForm');
-}
-
-function addStudentFee() {
-  const studentId = document.getElementById('studentFeeStudentId').value;
-  const feeTypeDropdown = document.getElementById('feeType');
-  const feeTypeId = parseInt(feeTypeDropdown.value);
-  const amount = parseFloat(document.getElementById('feeAmount').value);
-  const dueDate = document.getElementById('feeDueDate').value;
-  
-  if (!studentId || !feeTypeId || isNaN(amount) || !dueDate) {
-    alert('All fields are required');
-    return;
-  }
-  
-  ipcRenderer.send('add-student-fee', {
-    student_id: studentId,
-    fee_type_id: feeTypeId,
-    amount,
-    due_date: dueDate
-  });
-  
-  clearForm('studentFeeForm');
-}
-
-// CRUD operations
-function editSession(id) {
-  // Implementation will be added in a future update
-  alert('Edit session functionality will be available in a future update');
+  closeModal();
 }
 
 function deleteSession(id) {
-  if (confirm('Are you sure you want to delete this session? This cannot be undone.')) {
+  if (confirm('Are you sure you want to delete this session?')) {
     ipcRenderer.send('delete-session', id);
+    showNotification('Deleting session...', 'warning');
   }
 }
 
-function editFeeType(id) {
-  // Implementation will be added in a future update
-  alert('Edit fee type functionality will be available in a future update');
-}
-
-function deleteFeeType(id) {
-  if (confirm('Are you sure you want to delete this fee type? This cannot be undone.')) {
-    ipcRenderer.send('delete-fee-type', id);
-  }
-}
-
-function editRoute(id) {
-  // Implementation will be added in a future update
-  alert('Edit route functionality will be available in a future update');
-}
-
-function deleteRoute(id) {
-  if (confirm('Are you sure you want to delete this route? This cannot be undone.')) {
-    ipcRenderer.send('delete-route', id);
-  }
-}
-
-function editStudent(id) {
-  // Implementation will be added in a future update
-  alert('Edit student functionality will be available in a future update');
-}
-
-function deleteStudent(id) {
-  if (confirm('Are you sure you want to delete this student? This will also delete all associated fees. This cannot be undone.')) {
-    ipcRenderer.send('delete-student', id);
-  }
-}
-
-function viewStudentFees(id, name) {
-  document.getElementById('studentFeesName').textContent = name;
-  document.getElementById('studentFeeStudentId').value = id;
-  
-  showSection('studentFeesSection');
-  ipcRenderer.send('get-student-fees', id);
+// Fee Type Functions
+function loadFeeTypes() {
   ipcRenderer.send('get-fee-types');
 }
 
-function updateFeeStatus(id, studentId, status) {
-  ipcRenderer.send('update-fee-status', { id, student_id: studentId, status });
+function showFeeTypeModal(mode = 'add', feeTypeId = null) {
+  resetForm('feeTypeForm');
+  safelyUpdateElement('modalTitle', mode === 'add' ? 'Add Fee Type' : 'Edit Fee Type');
+  
+  if (mode === 'edit' && feeTypeId) {
+    ipcRenderer.send('get-fee-type', feeTypeId);
+  }
+  
+  document.getElementById('sessionForm').style.display = 'none';
+  document.getElementById('feeTypeForm').style.display = 'block';
+  document.getElementById('routeForm').style.display = 'none';
+  document.getElementById('studentForm').style.display = 'none';
+  
+  document.getElementById('modalOverlay').classList.add('active');
 }
 
-function deleteStudentFee(id, studentId) {
-  if (confirm('Are you sure you want to delete this fee? This cannot be undone.')) {
-    ipcRenderer.send('delete-student-fee', { id, student_id: studentId });
+function saveFeeType() {
+  const id = document.getElementById('feeTypeId').value;
+  const name = document.getElementById('feeTypeName').value;
+  const amount = document.getElementById('feeTypeAmount').value;
+  const isRecurring = document.getElementById('feeTypeRecurring').checked;
+  
+  if (!name || !amount) {
+    showNotification('Please fill in all required fields', 'error');
+    return;
+  }
+  
+  if (id) {
+    // Update existing fee type
+    ipcRenderer.send('update-fee-type', {
+      id,
+      name,
+      amount,
+      is_recurring: isRecurring
+    });
+    showNotification('Updating fee type...', 'info');
+  } else {
+    // Add new fee type
+    ipcRenderer.send('add-fee-type', {
+      name,
+      amount,
+      is_recurring: isRecurring
+    });
+    showNotification('Adding new fee type...', 'info');
+  }
+  
+  closeModal();
+}
+
+function deleteFeeType(id) {
+  if (confirm('Are you sure you want to delete this fee type?')) {
+    ipcRenderer.send('delete-fee-type', id);
+    showNotification('Deleting fee type...', 'warning');
   }
 }
 
-// Initialize on load
-console.log('Renderer script loaded');
+// Route Functions
+function loadRoutes() {
+  ipcRenderer.send('get-routes');
+}
+
+function showRouteModal(mode = 'add', routeId = null) {
+  resetForm('routeForm');
+  safelyUpdateElement('modalTitle', mode === 'add' ? 'Add New Route' : 'Edit Route');
+  
+  if (mode === 'edit' && routeId) {
+    ipcRenderer.send('get-route', routeId);
+  }
+  
+  document.getElementById('sessionForm').style.display = 'none';
+  document.getElementById('feeTypeForm').style.display = 'none';
+  document.getElementById('routeForm').style.display = 'block';
+  document.getElementById('studentForm').style.display = 'none';
+  
+  document.getElementById('modalOverlay').classList.add('active');
+}
+
+function saveRoute() {
+  const id = document.getElementById('routeId').value;
+  const name = document.getElementById('routeName').value;
+  const distance = document.getElementById('routeDistance').value;
+  const fee = document.getElementById('routeFee').value;
+  
+  if (!name || !distance || !fee) {
+    showNotification('Please fill in all required fields', 'error');
+    return;
+  }
+  
+  if (id) {
+    // Update existing route
+    ipcRenderer.send('update-route', {
+      id,
+      name,
+      distance_km: distance,
+      base_fee: fee
+    });
+    showNotification('Updating route...', 'info');
+  } else {
+    // Add new route
+    ipcRenderer.send('add-route', {
+      name,
+      distance_km: distance,
+      base_fee: fee
+    });
+    showNotification('Adding new route...', 'info');
+  }
+  
+  closeModal();
+}
+
+function deleteRoute(id) {
+  if (confirm('Are you sure you want to delete this route?')) {
+    ipcRenderer.send('delete-route', id);
+    showNotification('Deleting route...', 'warning');
+  }
+}
+
+// Student Functions
+function loadStudents() {
+  ipcRenderer.send('get-students');
+  loadRoutesForDropdown();
+}
+
+function loadRoutesForDropdown() {
+  ipcRenderer.send('get-routes');
+}
+
+function showStudentModal(mode = 'add', studentId = null) {
+  resetForm('studentForm');
+  safelyUpdateElement('modalTitle', mode === 'add' ? 'Add New Student' : 'Edit Student');
+  
+  if (mode === 'edit' && studentId) {
+    ipcRenderer.send('get-student', studentId);
+  }
+  
+  document.getElementById('sessionForm').style.display = 'none';
+  document.getElementById('feeTypeForm').style.display = 'none';
+  document.getElementById('routeForm').style.display = 'none';
+  document.getElementById('studentForm').style.display = 'block';
+  
+  document.getElementById('modalOverlay').classList.add('active');
+}
+
+function saveStudent() {
+  const id = document.getElementById('studentId').value;
+  const name = document.getElementById('studentName').value;
+  const admissionNumber = document.getElementById('admissionNumber').value;
+  const routeId = document.getElementById('studentRoute').value;
+  
+  if (!name || !admissionNumber) {
+    showNotification('Please fill in all required fields', 'error');
+    return;
+  }
+  
+  if (id) {
+    // Update existing student
+    ipcRenderer.send('update-student', {
+      id,
+      name,
+      admission_number: admissionNumber,
+      route_id: routeId || null
+    });
+    showNotification('Updating student...', 'info');
+  } else {
+    // Add new student
+    ipcRenderer.send('add-student', {
+      name,
+      admission_number: admissionNumber,
+      route_id: routeId || null
+    });
+    showNotification('Adding new student...', 'info');
+  }
+  
+  closeModal();
+}
+
+function deleteStudent(id) {
+  if (confirm('Are you sure you want to delete this student?')) {
+    ipcRenderer.send('delete-student', id);
+    showNotification('Deleting student...', 'warning');
+  }
+}
+
+// UI Helpers
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('active');
+}
+
+function resetForm(formId) {
+  document.getElementById(formId).reset();
+  
+  // Clear any hidden id fields
+  const idFields = document.querySelectorAll(`#${formId} input[type="hidden"]`);
+  idFields.forEach(field => field.value = '');
+}
+
+// School Functions
+function checkSchoolSetup() {
+  ipcRenderer.send('get-school');
+}
+
+function setupSchool(name, location, sessionStartMonth) {
+  ipcRenderer.send('add-school', {
+    name,
+    location,
+    sessionStartMonth
+  });
+  
+  showNotification('Setting up your school...', 'info');
+}

@@ -1,107 +1,71 @@
-# SchoolFeesOffline
+# School Management System
 
-A desktop application for managing school fees without requiring an internet connection. Built with Electron and SQLite.
+A desktop application built with Electron for managing school-related data, including:
+
+- Academic sessions
+- Fee types and payments
+- Transport routes
+- Student information
 
 ## Features
 
-### School Management
-- One-time school setup with name, location, and academic session start month
-- Web token generation for future web integration
-- Automatic session management based on the school's start month
+- Modern and intuitive UI
+- Dark/light theme toggle
+- Dashboard with key stats
+- CRUD operations for sessions, fee types, routes, and students
+- Data persistence with SQLite database
+- Offline-first approach
 
-### Dashboard
-- Key statistics including active session, total students, and pending fees
-- Quick navigation to all main features
+## Prerequisites
 
-### Session Management
-- Automatic session creation based on start month
-- Session history tracking
-- Active/inactive session status
+- [Node.js](https://nodejs.org/) (v14 or higher)
+- npm (included with Node.js)
 
-### Fee Management
-- Define fee types (tuition, transport, etc.)
-- Set fee amounts and specify recurring/one-time status
-- Track fee payments and due dates
+## Installation
 
-### Transport Routes
-- Add and manage transport routes
-- Set route distances and base fees
-- Assign routes to students
+1. Clone this repository or download the source code
+2. Navigate to the project directory in your terminal/command prompt
+3. Install the dependencies:
 
-### Student Management
-- Add/edit student details with admission numbers
-- Assign transport routes to students
-- Track fee payments and payment history
-- Manage student-specific fees
+```bash
+npm install
+```
 
-## Database Schema
+## Running the Application
 
-The application uses SQLite for data storage with the following schema:
+To start the application in development mode:
 
-- **school**: Basic info, session settings, web token (single row)
-- **sessions**: Academic sessions with start/end dates and active status
-- **fee_types**: Fee categories, amounts, and recurring status
-- **routes**: Route details, distances, and base fees
-- **students**: Student information and route assignments
-- **student_fees**: Fee assignments, payment status, and due dates
+```bash
+npm start
+```
 
-## Getting Started
+## Application Structure
 
-### Prerequisites
-- Node.js (v12 or higher)
-- npm (v6 or higher)
+- `/src/main` - Main process code
+  - `main.js` - Entry point
+  - `database.js` - Database operations
+- `/src/renderer` - Renderer process code
+  - `index.html` - Main UI
+  - `renderer.js` - UI logic
+  - `/assets` - Styles and images
+- `/src/utils` - Shared utilities
+- `/db` - Database files
 
-### Installation
+## First-time Setup
 
-1. Clone the repository or download the source code
-   ```
-   git clone https://github.com/yourusername/school-fees-offline.git
-   cd school-fees-offline
-   ```
+When you first run the application, you'll be prompted to set up your school:
 
-2. Install dependencies
-   ```
-   npm install
-   ```
+1. Enter your school name
+2. Provide the location
+3. Select the month when your academic session starts
+4. Click "Set Up School"
 
-3. Start the application
-   ```
-   npm start
-   ```
+After the initial setup, you'll be taken to the dashboard where you can start managing your school data.
 
-## Usage
+## Database
 
-1. On first launch, complete the school setup form with your school's details
-2. Save your web token securely for future web integration
-3. Use the dashboard to navigate to different sections of the application:
-   - Manage Sessions: View and add academic sessions
-   - Manage Fees: Define fee types and amounts
-   - Manage Routes: Set up transport routes
-   - Manage Students: Add students and assign routes
-   - Student Fees: Manage individual student fees and payment status
-
-## Development
-
-### Project Structure
-- `src/main/` - Electron main process code
-   - `main.js` - Main application entry point
-   - `database.js` - Database operations and schema
-- `src/renderer/` - Frontend UI
-   - `index.html` - Main application UI
-   - `renderer.js` - Frontend JavaScript
-   - `assets/` - CSS and other assets
-- `db/` - SQLite database storage
+The application uses SQLite for data storage. The database file is stored in the `/db` directory.
 
 ## License
 
-This project is licensed under the MIT License.
-
-## Contributing
-
-Contributions, issues, and feature requests are welcome!
-
-## Roadmap
-
-- Export/import functionality for data backup
-- Reports and printable receipts
-- Web synchronization using the generated web token 
+MIT 

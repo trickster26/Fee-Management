@@ -6,12 +6,16 @@ let mainWindow;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 1200,
+    width: 1280,
     height: 800,
+    minWidth: 1024,
+    minHeight: 768,
     webPreferences: {
       nodeIntegration: true,
-      contextIsolation: false
-    }
+      contextIsolation: false,
+      devTools: true // Set to false in production
+    },
+    icon: path.join(__dirname, '../renderer/assets/images/logo.png')
   });
 
   // Load the index.html file
@@ -19,8 +23,10 @@ function createWindow() {
   console.log('Loading index.html from:', indexPath);
   mainWindow.loadFile(indexPath);
   
-  // Always open DevTools in development
-  mainWindow.webContents.openDevTools();
+  // Open DevTools in development
+  if (process.env.NODE_ENV === 'development') {
+    mainWindow.webContents.openDevTools();
+  }
 
   // Log any loading errors
   mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
@@ -98,6 +104,18 @@ ipcMain.on('add-session', (event, data) => {
   });
 });
 
+ipcMain.on('update-session', (event, data) => {
+  db.updateSession(data.id, data.name, data.start_date, data.end_date, data.is_active, (err) => {
+    event.reply('session-updated', err ? { error: err.message } : { success: true });
+    if (!err) {
+      // Refresh sessions list
+      db.getSessions((err, sessions) => {
+        event.reply('sessions-list', err ? [] : sessions);
+      });
+    }
+  });
+});
+
 ipcMain.on('get-session', (event, id) => {
   db.getSession(id, (err, session) => {
     event.reply('session-details', err ? { error: err.message } : session);
@@ -106,13 +124,16 @@ ipcMain.on('get-session', (event, id) => {
 
 ipcMain.on('delete-session', (event, id) => {
   db.deleteSession(id, (err) => {
-    if (err) {
-      event.reply('session-deleted', { error: err.message });
-    } else {
-      event.reply('session-deleted', { success: true });
+    event.reply('session-deleted', err ? { error: err.message } : { success: true });
+    if (!err) {
       // Refresh sessions list
       db.getSessions((err, sessions) => {
         event.reply('sessions-list', err ? [] : sessions);
+      });
+      
+      // Update dashboard stats
+      db.getDashboardStats((err, stats) => {
+        event.reply('dashboard-stats', err ? { error: err.message } : stats);
       });
     }
   });
@@ -134,6 +155,12 @@ ipcMain.on('add-fee-type', (event, data) => {
         event.reply('fee-types-list', err ? [] : feeTypes);
       });
     }
+  });
+});
+
+ipcMain.on('get-fee-type', (event, id) => {
+  db.getFeeType(id, (err, feeType) => {
+    event.reply('fee-type-details', err ? { error: err.message } : feeType);
   });
 });
 
@@ -177,6 +204,12 @@ ipcMain.on('add-route', (event, data) => {
         event.reply('routes-list', err ? [] : routes);
       });
     }
+  });
+});
+
+ipcMain.on('get-route', (event, id) => {
+  db.getRoute(id, (err, route) => {
+    event.reply('route-details', err ? { error: err.message } : route);
   });
 });
 
@@ -224,6 +257,11 @@ ipcMain.on('add-student', (event, data) => {
       // Refresh students list
       db.getStudents((err, students) => {
         event.reply('students-list', err ? [] : students);
+      });
+      
+      // Update dashboard stats
+      db.getDashboardStats((err, stats) => {
+        event.reply('dashboard-stats', err ? { error: err.message } : stats);
       });
     }
   });
@@ -314,4 +352,4 @@ ipcMain.on('delete-student-fee', (event, data) => {
       });
     }
   });
-}); 
+});

@@ -1,10 +1,14 @@
 {
   "name": "school-fees-offline",
   "version": "1.0.0",
+  "description": "School Management System for managing academic sessions, fees, students, and transportation",
   "main": "src/main/main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "test-db": "node src/utils/test-setup.js"
   },
+  "author": "",
+  "license": "MIT",
   "devDependencies": {
     "electron": "^35.0.3"
   },

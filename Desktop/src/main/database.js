@@ -528,6 +528,42 @@ function deleteStudentFee(id, callback) {
   });
 }
 
+// Get a specific fee type by ID
+function getFeeType(id, callback) {
+  db.get('SELECT * FROM fee_types WHERE id = ?', [id], callback);
+}
+
+// Get a specific route by ID
+function getRoute(id, callback) {
+  db.get('SELECT * FROM routes WHERE id = ?', [id], callback);
+}
+
+// Update a session
+function updateSession(id, name, startDate, endDate, isActive, callback) {
+  // If setting as active, first deactivate all sessions
+  if (isActive) {
+    db.run('UPDATE sessions SET is_active = 0', [], (err) => {
+      if (err) {
+        callback(err);
+        return;
+      }
+      updateSessionRecord();
+    });
+  } else {
+    updateSessionRecord();
+  }
+
+  function updateSessionRecord() {
+    db.run(
+      'UPDATE sessions SET name = ?, start_date = ?, end_date = ?, is_active = ? WHERE id = ?',
+      [name, startDate, endDate, isActive ? 1 : 0, id],
+      function(err) {
+        callback(err);
+      }
+    );
+  }
+}
+
 module.exports = {
   initDatabase,
   getSchool,
@@ -553,5 +589,8 @@ module.exports = {
   addStudentFee,
   updateFeeStatus,
   deleteStudentFee,
-  getDashboardStats
+  getDashboardStats,
+  getFeeType,
+  getRoute,
+  updateSession
 }; 

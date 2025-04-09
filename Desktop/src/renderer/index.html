@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>School Fee Management System</title>
-    <link rel="stylesheet" href="./assets/styles.css">
+    <link rel="stylesheet" href="assets/test.css">
+    <link rel="stylesheet" href="assets/styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@100;300;400;500;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -19,45 +20,45 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
 </head>
 <body class="bg-gray-50">
-        <!-- School Setup Section -->
+    <!-- Initial School Setup Section -->
     <div id="schoolSetup" class="screen">
         <div class="setup-container">
             <div class="setup-box">
                 <h2>Welcome to School Management System</h2>
                 <p>Please set up your school information to get started.</p>
                 <form id="schoolSetupForm" class="form">
-                <div class="form-group">
+                    <div class="form-group">
                         <label for="schoolName">School Name</label>
                         <input type="text" id="schoolName" placeholder="e.g. ABC Public School" required>
-                </div>
-                <div class="form-group">
+                    </div>
+                    <div class="form-group">
                         <label for="schoolLocation">Location</label>
                         <input type="text" id="schoolLocation" placeholder="e.g. New York, USA" required>
-                </div>
-                <div class="form-group">
+                    </div>
+                    <div class="form-group">
                         <label for="sessionStartMonth">Session Start Month</label>
-                    <select id="sessionStartMonth" required>
-                        <option value="1">January</option>
-                        <option value="2">February</option>
-                        <option value="3">March</option>
-                        <option value="4">April</option>
-                        <option value="5">May</option>
-                        <option value="6">June</option>
-                        <option value="7">July</option>
-                        <option value="8">August</option>
-                        <option value="9">September</option>
-                        <option value="10">October</option>
-                        <option value="11">November</option>
-                        <option value="12">December</option>
-                    </select>
-                </div>
+                        <select id="sessionStartMonth" required>
+                            <option value="1">January</option>
+                            <option value="2">February</option>
+                            <option value="3">March</option>
+                            <option value="4">April</option>
+                            <option value="5">May</option>
+                            <option value="6">June</option>
+                            <option value="7">July</option>
+                            <option value="8">August</option>
+                            <option value="9">September</option>
+                            <option value="10">October</option>
+                            <option value="11">November</option>
+                            <option value="12">December</option>
+                        </select>
+                    </div>
                     <button type="button" id="saveSchoolBtn" class="primary-btn">Set Up School</button>
-            </form>
+                </form>
             </div>
         </div>
-        </div>
+    </div>
 
-    <!-- Main App Container -->
+    <!-- Main Application Layout -->
     <div id="appLayout" class="app-layout hidden">
         <!-- Sidebar Navigation -->
         <nav id="sidebar" class="sidebar">
@@ -73,7 +74,7 @@
                 <h3 id="schoolNameHeader">School Name</h3>
             </div>
             <div class="sidebar-nav">
-                <a href="#" class="nav-item active" data-section="dashboard">
+                <a href="#" class="nav-item" data-section="dashboard">
                     <i class="fas fa-tachometer-alt"></i>
                     <span>Dashboard</span>
                 </a>
@@ -259,8 +260,8 @@
                         </div>
                         <div class="card-body">
                             <div id="feeSummaryChart" class="chart"></div>
-            </div>
-        </div>
+                        </div>
+                    </div>
 
                     <!-- Recent Activities -->
                     <div class="content-card">
@@ -284,39 +285,108 @@
                 <div class="section-header">
                     <div>
                         <h1 class="page-title">Student Management</h1>
+                        <p class="text-secondary">Manage student records and information</p>
                     </div>
                     <div class="action-buttons">
+                        <button type="button" class="secondary-btn">
+                            <i class="fas fa-file-export"></i>
+                            Export List
+                        </button>
                         <button type="button" id="addStudentBtn" class="primary-btn">
                             <i class="fas fa-plus"></i>
                             Add New Student
                         </button>
                     </div>
                 </div>
-                
-                <div class="content-card full-width">
-                    <div class="card-header">
-                        <h2 class="card-title">All Students</h2>
-                        <div class="search-container">
-                            <input type="text" id="studentSearch" placeholder="Search students..." class="search-input">
-                            <i class="fas fa-search search-icon"></i>
-                        </div>
+
+                <!-- Student Filters -->
+                <div class="filters-container">
+                    <div class="search-container">
+                        <input type="text" id="studentSearch" placeholder="Search students..." class="search-input">
+                        <i class="fas fa-search search-icon"></i>
                     </div>
+                    <div class="filter-group">
+                        <select id="classFilter" class="select-sm">
+                            <option value="">All Classes</option>
+                            <option value="1">Class 1</option>
+                            <option value="2">Class 2</option>
+                            <!-- Add more classes -->
+                        </select>
+                        <select id="routeFilter" class="select-sm">
+                            <option value="">All Routes</option>
+                            <!-- Will be populated dynamically -->
+                        </select>
+                        <select id="feeStatusFilter" class="select-sm">
+                            <option value="">All Fee Status</option>
+                            <option value="paid">Paid</option>
+                            <option value="pending">Pending</option>
+                            <option value="overdue">Overdue</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Students List -->
+                <div class="content-card full-width">
                     <div class="table-container">
                         <table class="data-table">
                             <thead>
                                 <tr>
-                                    <th>Name</th>
-                                    <th>Admission #</th>
+                                    <th>
+                                        <input type="checkbox" id="selectAllStudents">
+                                    </th>
+                                    <th>Student Name</th>
+                                    <th>Class</th>
+                                    <th>Admission No.</th>
                                     <th>Transport Route</th>
+                                    <th>Fee Status</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="studentsTableBody">
+                                <!-- Sample Student Row -->
                                 <tr>
-                                    <td colspan="4" class="empty-table">No students found</td>
+                                    <td><input type="checkbox" class="student-select"></td>
+                                    <td>
+                                        <div class="student-info">
+                                            <img src="./assets/default-avatar.png" alt="Student" class="student-avatar">
+                                            <div>
+                                                <div class="student-name">John Doe</div>
+                                                <div class="student-email">john.doe@example.com</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>Class 5</td>
+                                    <td>2024001</td>
+                                    <td>Route A</td>
+                                    <td>
+                                        <span class="status pending">Pending</span>
+                                    </td>
+                                    <td>
+                                        <div class="action-buttons">
+                                            <button class="icon-btn" title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="icon-btn" title="View Details">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            <button class="icon-btn delete" title="Delete">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
                                 </tr>
                             </tbody>
                         </table>
+                    </div>
+                    <!-- Pagination -->
+                    <div class="pagination">
+                        <button class="page-btn" disabled>
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <span class="page-info">Page 1 of 1</span>
+                        <button class="page-btn" disabled>
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
                     </div>
                 </div>
             </section>
@@ -326,6 +396,7 @@
                 <div class="section-header">
                     <div>
                         <h1 class="page-title">Fee Structure</h1>
+                        <p class="text-secondary">Manage fee types and structures</p>
                     </div>
                     <div class="action-buttons">
                         <button type="button" id="addFeeTypeBtn" class="primary-btn">
@@ -334,24 +405,64 @@
                         </button>
                     </div>
                 </div>
-                
+
+                <!-- Fee Categories -->
+                <div class="fee-categories">
+                    <div class="category-card">
+                        <div class="category-header">
+                            <h3>Tuition Fees</h3>
+                            <span class="badge">Required</span>
+                        </div>
+                        <div class="category-amount">₹45,000</div>
+                        <div class="category-details">
+                            <p>Base annual tuition fee</p>
+                            <span class="frequency">Quarterly payment</span>
+                        </div>
+                    </div>
+                    <!-- Add more category cards -->
+                </div>
+
+                <!-- Fee Types Table -->
                 <div class="content-card full-width">
                     <div class="card-header">
                         <h2 class="card-title">Fee Types</h2>
+                        <div class="card-actions">
+                            <select id="feeClassFilter" class="select-sm">
+                                <option value="">All Classes</option>
+                                <!-- Add class options -->
+                            </select>
+                        </div>
                     </div>
                     <div class="table-container">
                         <table class="data-table">
                             <thead>
                                 <tr>
-                                    <th>Name</th>
+                                    <th>Fee Type</th>
                                     <th>Amount</th>
-                                    <th>Recurring</th>
+                                    <th>Frequency</th>
+                                    <th>Applicable To</th>
+                                    <th>Status</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
-                            <tbody id="feesTableBody">
+                            <tbody id="feeTypesTableBody">
+                                <!-- Sample Fee Type Row -->
                                 <tr>
-                                    <td colspan="4" class="empty-table">No fee types found</td>
+                                    <td>Annual Tuition Fee</td>
+                                    <td>₹45,000</td>
+                                    <td>Quarterly</td>
+                                    <td>All Classes</td>
+                                    <td><span class="status active">Active</span></td>
+                                    <td>
+                                        <div class="action-buttons">
+                                            <button class="icon-btn" title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="icon-btn delete" title="Delete">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
                                 </tr>
                             </tbody>
                         </table>
@@ -364,6 +475,7 @@
                 <div class="section-header">
                     <div>
                         <h1 class="page-title">Payments</h1>
+                        <p class="text-secondary">Track and manage student payments</p>
                     </div>
                     <div class="action-buttons">
                         <button type="button" id="recordPaymentBtn" class="primary-btn">
@@ -372,16 +484,38 @@
                         </button>
                     </div>
                 </div>
-                
+
+                <!-- Payment Stats -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div>
+                                <p class="stat-title">Total Collections</p>
+                                <h3 class="stat-value">₹2,45,000</h3>
+                            </div>
+                            <div class="stat-icon blue">
+                                <i class="fas fa-rupee-sign"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Add more stat cards -->
+                </div>
+
+                <!-- Payments Table -->
                 <div class="content-card full-width">
                     <div class="card-header">
-                        <h2 class="card-title">All Payments</h2>
-                        <div class="filter-container">
+                        <h2 class="card-title">Recent Payments</h2>
+                        <div class="filter-group">
+                            <div class="date-range">
+                                <input type="date" class="select-sm" id="startDate">
+                                <span>to</span>
+                                <input type="date" class="select-sm" id="endDate">
+                            </div>
                             <select id="paymentStatusFilter" class="select-sm">
-                                <option value="all">All Statuses</option>
-                                <option value="paid">Paid</option>
+                                <option value="">All Status</option>
+                                <option value="success">Success</option>
                                 <option value="pending">Pending</option>
-                                <option value="overdue">Overdue</option>
+                                <option value="failed">Failed</option>
                             </select>
                         </div>
                     </div>
@@ -389,17 +523,34 @@
                         <table class="data-table">
                             <thead>
                                 <tr>
+                                    <th>Receipt No</th>
                                     <th>Student</th>
-                                    <th>Fee Type</th>
+                                    <th>Payment For</th>
                                     <th>Amount</th>
-                                    <th>Due Date</th>
+                                    <th>Date</th>
                                     <th>Status</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="paymentsTableBody">
+                                <!-- Sample Payment Row -->
                                 <tr>
-                                    <td colspan="6" class="empty-table">No payments found</td>
+                                    <td>#RCP001</td>
+                                    <td>John Doe</td>
+                                    <td>Tuition Fee - Q1</td>
+                                    <td>₹11,250</td>
+                                    <td>2024-04-01</td>
+                                    <td><span class="status success">Success</span></td>
+                                    <td>
+                                        <div class="action-buttons">
+                                            <button class="icon-btn" title="View Receipt">
+                                                <i class="fas fa-file-invoice"></i>
+                                            </button>
+                                            <button class="icon-btn" title="Download">
+                                                <i class="fas fa-download"></i>
+                                            </button>
+                                        </div>
+                                    </td>
                                 </tr>
                             </tbody>
                         </table>
@@ -412,6 +563,7 @@
                 <div class="section-header">
                     <div>
                         <h1 class="page-title">Transport Routes</h1>
+                        <p class="text-secondary">Manage transport routes and fees</p>
                     </div>
                     <div class="action-buttons">
                         <button type="button" id="addRouteBtn" class="primary-btn">
@@ -420,24 +572,75 @@
                         </button>
                     </div>
                 </div>
-                
-                <div class="content-card full-width">
-                    <div class="card-header">
-                        <h2 class="card-title">All Routes</h2>
+
+                <!-- Route Cards -->
+                <div class="route-cards">
+                    <div class="route-card">
+                        <div class="route-header">
+                            <h3>Route A</h3>
+                            <span class="badge">15 Students</span>
+                        </div>
+                        <div class="route-details">
+                            <div class="detail-item">
+                                <i class="fas fa-map-marker-alt"></i>
+                                <span>North City Area</span>
+                            </div>
+                            <div class="detail-item">
+                                <i class="fas fa-route"></i>
+                                <span>5.2 km</span>
+                            </div>
+                            <div class="detail-item">
+                                <i class="fas fa-rupee-sign"></i>
+                                <span>₹2,000/month</span>
+                            </div>
+                        </div>
+                        <div class="route-actions">
+                            <button class="text-btn">View Details</button>
+                            <button class="icon-btn">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                        </div>
                     </div>
+                    <!-- Add more route cards -->
+                </div>
+
+                <!-- Routes Table -->
+                <div class="content-card full-width">
                     <div class="table-container">
                         <table class="data-table">
                             <thead>
                                 <tr>
-                                    <th>Name</th>
-                                    <th>Distance (km)</th>
-                                    <th>Base Fee</th>
+                                    <th>Route Name</th>
+                                    <th>Area Coverage</th>
+                                    <th>Distance</th>
+                                    <th>Monthly Fee</th>
+                                    <th>Students</th>
+                                    <th>Status</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="routesTableBody">
+                                <!-- Sample Route Row -->
                                 <tr>
-                                    <td colspan="4" class="empty-table">No routes found</td>
+                                    <td>Route A</td>
+                                    <td>North City Area</td>
+                                    <td>5.2 km</td>
+                                    <td>₹2,000</td>
+                                    <td>15</td>
+                                    <td><span class="status active">Active</span></td>
+                                    <td>
+                                        <div class="action-buttons">
+                                            <button class="icon-btn" title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="icon-btn" title="View Map">
+                                                <i class="fas fa-map"></i>
+                                            </button>
+                                            <button class="icon-btn delete" title="Delete">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
                                 </tr>
                             </tbody>
                         </table>
@@ -450,6 +653,7 @@
                 <div class="section-header">
                     <div>
                         <h1 class="page-title">Academic Sessions</h1>
+                        <p class="text-secondary">Manage academic years and terms</p>
                     </div>
                     <div class="action-buttons">
                         <button type="button" id="addSessionBtn" class="primary-btn">
@@ -458,28 +662,65 @@
                         </button>
                     </div>
                 </div>
-                
+
+                <!-- Current Session Card -->
+                <div class="session-overview">
+                    <div class="current-session">
+                        <div class="session-header">
+                            <h3>Current Session</h3>
+                            <span class="status active">Active</span>
+                        </div>
+                        <div class="session-details">
+                            <h2>2023-2024</h2>
+                            <p>April 2023 - March 2024</p>
+                        </div>
+                        <div class="progress-container">
+                            <div class="progress-info">
+                                <span>Session Progress</span>
+                                <span>75%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress" style="width: 75%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sessions Table -->
                 <div class="content-card full-width">
-                    <div class="card-header">
-                        <h2 class="card-title">All Sessions</h2>
-            </div>
-            <div class="table-container">
+                    <div class="table-container">
                         <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Start Date</th>
-                            <th>End Date</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                            <tbody id="sessionsTableBody">
+                            <thead>
                                 <tr>
-                                    <td colspan="5" class="empty-table">No sessions found</td>
+                                    <th>Session Name</th>
+                                    <th>Start Date</th>
+                                    <th>End Date</th>
+                                    <th>Students</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sessionsTableBody">
+                                <!-- Sample Session Row -->
+                                <tr>
+                                    <td>2023-2024</td>
+                                    <td>2023-04-01</td>
+                                    <td>2024-03-31</td>
+                                    <td>450</td>
+                                    <td><span class="status active">Active</span></td>
+                                    <td>
+                                        <div class="action-buttons">
+                                            <button class="icon-btn" title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="icon-btn" title="View Details">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </div>
+                                    </td>
                                 </tr>
                             </tbody>
-                </table>
+                        </table>
                     </div>
                 </div>
             </section>

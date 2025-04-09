@@ -668,3 +668,105 @@ function setupSchool(name, location, sessionStartMonth) {
   
   showNotification('Setting up your school...', 'info');
 }
+
+// Wait for the DOM to be fully loaded
+document.addEventListener('DOMContentLoaded', function() {
+    // Get all navigation items
+    const navItems = document.querySelectorAll('.nav-item');
+    
+    // Get all content sections
+    const sections = document.querySelectorAll('.content-section');
+    
+    // Get the current page title element
+    const currentPageTitle = document.getElementById('currentPageTitle');
+
+    // Function to show selected section and hide others
+    function showSection(sectionId) {
+        // Hide all sections
+        sections.forEach(section => {
+            section.classList.add('hidden');
+        });
+
+        // Remove active class from all nav items
+        navItems.forEach(item => {
+            item.classList.remove('active');
+        });
+
+        // Show selected section
+        const selectedSection = document.getElementById(sectionId);
+        if (selectedSection) {
+            selectedSection.classList.remove('hidden');
+        }
+
+        // Add active class to selected nav item
+        const selectedNavItem = document.querySelector(`[data-section="${sectionId}"]`);
+        if (selectedNavItem) {
+            selectedNavItem.classList.add('active');
+        }
+
+        // Update page title
+        currentPageTitle.textContent = sectionId.charAt(0).toUpperCase() + sectionId.slice(1);
+    }
+
+    // Add click event listeners to navigation items
+    navItems.forEach(item => {
+        item.addEventListener('click', (e) => {
+            e.preventDefault();
+            const sectionId = item.getAttribute('data-section');
+            showSection(sectionId);
+        });
+    });
+
+    // Handle initial school setup
+    const schoolSetup = document.getElementById('schoolSetup');
+    const appLayout = document.getElementById('appLayout');
+    const saveSchoolBtn = document.getElementById('saveSchoolBtn');
+
+    // Check if school is already set up (you can use localStorage for demo)
+    const isSchoolSetup = localStorage.getItem('schoolSetup');
+
+    if (isSchoolSetup) {
+        schoolSetup.classList.add('hidden');
+        appLayout.classList.remove('hidden');
+    }
+
+    // Handle school setup form submission
+    saveSchoolBtn.addEventListener('click', () => {
+        const schoolName = document.getElementById('schoolName').value;
+        const schoolLocation = document.getElementById('schoolLocation').value;
+        const sessionStartMonth = document.getElementById('sessionStartMonth').value;
+
+        if (schoolName && schoolLocation && sessionStartMonth) {
+            // Save school info (using localStorage for demo)
+            localStorage.setItem('schoolSetup', 'true');
+            localStorage.setItem('schoolName', schoolName);
+            localStorage.setItem('schoolLocation', schoolLocation);
+
+            // Update school name in sidebar
+            document.getElementById('schoolNameHeader').textContent = schoolName;
+            document.getElementById('schoolLocationDisplay').textContent = schoolLocation;
+
+            // Hide setup and show main app
+            schoolSetup.classList.add('hidden');
+            appLayout.classList.remove('hidden');
+
+            // Show dashboard by default
+            showSection('dashboard');
+        }
+    });
+
+    // Show dashboard by default if school is already set up
+    if (isSchoolSetup) {
+        showSection('dashboard');
+    }
+
+    // Theme toggle functionality
+    const themeToggle = document.getElementById('themeToggle');
+    themeToggle.addEventListener('click', () => {
+        document.body.classList.toggle('dark-mode');
+        const isDarkMode = document.body.classList.contains('dark-mode');
+        themeToggle.innerHTML = isDarkMode ? 
+            '<i class="fas fa-sun"></i>' : 
+            '<i class="fas fa-moon"></i>';
+    });
+});

@@ -80,6 +80,21 @@ function createTables() {
     FOREIGN KEY (student_id) REFERENCES students(id),
     FOREIGN KEY (fee_type_id) REFERENCES fee_types(id)
   )`);
+
+  // Invoices table (new)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS invoices (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      invoice_number TEXT UNIQUE NOT NULL,
+      student_id INTEGER NOT NULL,
+      total_amount REAL NOT NULL,
+      paid_amount REAL DEFAULT 0,
+      status TEXT DEFAULT 'pending',
+      issue_date DATE NOT NULL,
+      payment_date DATE,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
+    )`);
 }
 
 // School functions

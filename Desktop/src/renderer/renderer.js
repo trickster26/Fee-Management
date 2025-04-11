@@ -50,7 +50,8 @@ function showSection(sectionId) {
     'sessions': 'sessionsSection',
     'fees': 'feesSection',
     'routes': 'routesSection',
-    'students': 'studentsSection'
+    'students': 'studentsSection',
+    "invoices": 'invoicesSection'
   };
   
   const actualSectionId = sectionMap[sectionId] || sectionId;
@@ -79,6 +80,8 @@ function showSection(sectionId) {
       loadRoutes();
     } else if (sectionId === 'students') {
       loadStudents();
+    } else if (sectionId === 'invoices'){
+      // loadInvoices();
     }
   } else {
     console.warn(`Section element with ID: ${actualSectionId} not found`);
